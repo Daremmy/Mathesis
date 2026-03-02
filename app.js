@@ -11,7 +11,7 @@
 ═══════════════════════════════════════════════════════ */
 const SUPABASE_URL = 'https://fzvvjqlreuuwfdrhvlnu.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ6dnZqcWxyZXV1d2Zkcmh2bG51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzOTYwNDksImV4cCI6MjA4Nzk3MjA0OX0.Rak0Jxfv6L1dFz2ZD4gu8t5pAtJK_IYVBpCCA6W2RD4';
-const GEMINI_KEY = 'gen-lang-client-0746262773';
+const GEMINI_KEY = 'AIzaSyBc0Vl2oZ6JPu15Ngv6Vo88qo1b95DcQOM';
 const ADMIN_NAME   = 'E_mathesis';
 
 /* ═══════════════════════════════════════════════════════
