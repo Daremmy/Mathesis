@@ -11,7 +11,7 @@
 ═══════════════════════════════════════════════════════ */
 const SUPABASE_URL = 'https://fzvvjqlreuuwfdrhvlnu.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ6dnZqcWxyZXV1d2Zkcmh2bG51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzOTYwNDksImV4cCI6MjA4Nzk3MjA0OX0.Rak0Jxfv6L1dFz2ZD4gu8t5pAtJK_IYVBpCCA6W2RD4';
-const DEEPSEEK_KEY = 'sk-3110f62190464b039263a39e3577939b';
+const GEMINI_KEY = 'gen-lang-client-0746262773#';
 const ADMIN_NAME   = 'E_mathesis';
 
 /* ═══════════════════════════════════════════════════════
@@ -741,32 +741,31 @@ function presNav(d){presIdx=Math.max(0,Math.min(presData.slides.length-1,presIdx
 function stopPresPlay(){stopSpeech();document.getElementById('pres-player').classList.add('hidden');document.getElementById('pres-list').style.display='';}
 
 /* ═══════════════════════════════════════════════════════
-   SECTION 12 — AI EXPLAINER (DeepSeek)
+   SECTION 12 — AI EXPLAINER (Google Gemini — free)
    ─────────────────────────────────────────────────────
    callDeepSeek(prompt) sends a request to the DeepSeek
    API and returns the response text.
    buildTextContent() extracts text from uploaded files.
 ═══════════════════════════════════════════════════════ */
 async function callDeepSeek(prompt) {
-  const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${DEEPSEEK_KEY}`
-    },
-    body: JSON.stringify({
-      model: 'deepseek-chat',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 2000,
-      temperature: 0.7
-    })
-  });
+  // Using Google Gemini free API
+  const resp = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: 2000, temperature: 0.7 }
+      })
+    }
+  );
   if (!resp.ok) {
     const err = await resp.text();
     throw new Error('AI error: ' + err);
   }
   const data = await resp.json();
-  return data.choices[0].message.content;
+  return data.candidates[0].content.parts[0].text;
 }
 
 /* File handling */
