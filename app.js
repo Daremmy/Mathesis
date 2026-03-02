@@ -251,33 +251,88 @@ function toast(msg, duration = 3000) {
 
 /* ═══════════════════════════════════════════════════════
    SECTION 6 — TEXT-TO-SPEECH
-   Uses the browser's built-in speech engine.
-   Works in Chrome and Edge, no API key needed.
+   ─────────────────────────────────────────────────────
+   Splits text into small chunks so it works on Android.
+   Chrome on phones cuts off long TTS — chunking fixes it.
+   Also waits for voices to load before speaking.
 ═══════════════════════════════════════════════════════ */
 let ttsActive = {};
+let ttsQueue = [];
+let ttsCurrentBtn = null;
+let ttsRate = 1.0;
+
+function splitIntoChunks(text, maxLen = 180) {
+  const sentences = text.match(/[^.!?\n]+[.!?\n]*/g) || [text];
+  const chunks = [];
+  let current = '';
+  for (const s of sentences) {
+    if ((current + s).length > maxLen) {
+      if (current.trim()) chunks.push(current.trim());
+      current = s;
+    } else {
+      current += ' ' + s;
+    }
+  }
+  if (current.trim()) chunks.push(current.trim());
+  return chunks.length ? chunks : [text];
+}
 
 function speak(text, btnId) {
   if (!text?.trim()) return;
   if (ttsActive[btnId]) { stopSpeech(); return; }
   stopSpeech();
-  const utt = new SpeechSynthesisUtterance(text.trim());
   const spdEl = document.getElementById(btnId.replace('tts','spd').replace('-tts','-spd'));
-  utt.rate = spdEl ? parseFloat(spdEl.value) : 1.0;
-  utt.onend = () => setTTSState(btnId, false);
-  utt.onerror = () => setTTSState(btnId, false);
-  window.speechSynthesis.speak(utt);
+  ttsRate = spdEl ? parseFloat(spdEl.value) : 1.0;
+  ttsQueue = splitIntoChunks(text.trim());
+  ttsCurrentBtn = btnId;
   ttsActive[btnId] = true;
   setTTSState(btnId, true);
+
+  // Android Chrome needs voices to be loaded first
+  const voices = window.speechSynthesis.getVoices();
+  if (voices.length > 0) {
+    speakNextChunk();
+  } else {
+    window.speechSynthesis.onvoiceschanged = () => {
+      window.speechSynthesis.onvoiceschanged = null;
+      speakNextChunk();
+    };
+    setTimeout(speakNextChunk, 500); // fallback
+  }
+}
+
+function speakNextChunk() {
+  if (!ttsQueue.length || !ttsCurrentBtn) {
+    setTTSState(ttsCurrentBtn, false);
+    ttsActive = {}; ttsCurrentBtn = null;
+    return;
+  }
+  const chunk = ttsQueue.shift();
+  const utt = new SpeechSynthesisUtterance(chunk);
+  utt.rate = ttsRate;
+  utt.lang = 'en-US';
+  // Pick an English voice — Android Chrome requires an explicit voice
+  const voices = window.speechSynthesis.getVoices();
+  const voice = voices.find(v => v.lang.startsWith('en') && v.localService) ||
+                voices.find(v => v.lang.startsWith('en')) ||
+                voices[0];
+  if (voice) utt.voice = voice;
+  utt.onend = () => speakNextChunk();
+  utt.onerror = () => speakNextChunk(); // skip broken chunk, keep going
+  window.speechSynthesis.speak(utt);
 }
 
 function stopSpeech() {
   window.speechSynthesis.cancel();
+  ttsQueue = [];
+  const btn = ttsCurrentBtn;
+  ttsCurrentBtn = null;
   Object.keys(ttsActive).forEach(k => setTTSState(k, false));
   ttsActive = {};
 }
 
 function setTTSState(id, active) {
-  ttsActive[id] = active;
+  if (id) ttsActive[id] = active;
   const btn = document.getElementById(id);
   if (!btn) return;
   btn.textContent = active ? '⏸' : '🔊';
