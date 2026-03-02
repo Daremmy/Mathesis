@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#6b3a2a">
+<title>Mathesis</title>
+<link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.json">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body data-theme="light">
+
+<!-- ═══════════════════════════════════════
+     AUTH SCREEN
+═══════════════════════════════════════ -->
+<div id="auth-screen" class="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">Mathesis</div>
+    <div class="auth-tagline">Your collaborative medical study platform</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Log In</button>
+      <button class="auth-tab" id="tab-signup" onclick="switchTab('signup')">Sign Up</button>
+    </div>
+
+    <!-- Login -->
+    <div id="login-form">
+      <div class="form-group"><label>Name</label><input id="l-name" placeholder="Your name..." autocomplete="off"></div>
+      <div class="form-group">
+        <label>Password</label>
+        <div class="pwd-wrap"><input id="l-pwd" type="password" placeholder="Password..."><button class="pwd-eye" onclick="togglePwd('l-pwd')">👁</button></div>
+        <div class="forgot-link mt8" onclick="switchTab('forgot')">Forgot password?</div>
+      </div>
+      <button class="btn btn-primary btn-w" onclick="login()">Log In →</button>
+      <div id="l-err" class="auth-err hidden"></div>
+    </div>
+
+    <!-- Sign Up -->
+    <div id="signup-form" class="hidden">
+      <div class="form-group"><label>Your Name</label><input id="s-name" placeholder="Choose a name..." maxlength="30" autocomplete="off"></div>
+      <div class="form-group"><label>Password</label><div class="pwd-wrap"><input id="s-pwd" type="password" placeholder="Choose a password..."><button class="pwd-eye" onclick="togglePwd('s-pwd')">👁</button></div></div>
+      <div class="form-group"><label>Confirm Password</label><div class="pwd-wrap"><input id="s-pwd2" type="password" placeholder="Repeat password..."><button class="pwd-eye" onclick="togglePwd('s-pwd2')">👁</button></div></div>
+      <div class="form-group">
+        <label>Security Question</label>
+        <select id="s-sq">
+          <option value="pet">What was your first pet's name?</option>
+          <option value="school">What primary school did you attend?</option>
+          <option value="city">What city were you born in?</option>
+          <option value="mother">What is your mother's middle name?</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Your Answer</label><input id="s-sa" placeholder="Answer..."></div>
+      <button class="btn btn-primary btn-w" onclick="signup()">Create Account →</button>
+      <div id="s-err" class="auth-err hidden"></div>
+    </div>
+
+    <!-- Forgot Password -->
+    <div id="forgot-form" class="hidden">
+      <div class="form-group"><label>Your Name</label><input id="f-name" placeholder="Your name..."></div>
+      <div id="f-q-section" class="hidden">
+        <div class="form-group"><label id="f-q-label">Security Question</label><input id="f-ans" placeholder="Your answer..."></div>
+        <div class="form-group"><label>New Password</label><div class="pwd-wrap"><input id="f-newpwd" type="password" placeholder="New password..."><button class="pwd-eye" onclick="togglePwd('f-newpwd')">👁</button></div></div>
+        <button class="btn btn-primary btn-w" onclick="resetPwd()">Reset Password →</button>
+      </div>
+      <button id="f-find-btn" class="btn btn-secondary btn-w" onclick="findSecQ()">Find My Account →</button>
+      <div class="forgot-link mt12" onclick="switchTab('login')">← Back to login</div>
+      <div id="f-err" class="auth-err hidden"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     MAIN APP SHELL
+═══════════════════════════════════════ -->
+<button class="mob-menu" id="mob-menu" onclick="toggleMobSidebar()">☰</button>
+
+<div id="app" class="app-shell hidden">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-brand">
+      <div class="sb-logo">Math<span>esis</span></div>
+      <div class="sb-profile">
+        <div class="sb-avatar" id="sb-avatar">—</div>
+        <div>
+          <span id="sb-pname" class="sb-pname">—</span>
+          <span id="sb-badge" class="sb-badge hidden">Admin</span>
+        </div>
+      </div>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" onclick="nav('dashboard')"><span class="nav-ico">🏛️</span>Dashboard</div>
+      <div class="nav-section">Study</div>
+      <div class="nav-item" onclick="nav('lessons')"><span class="nav-ico">📖</span>Lessons</div>
+      <div class="nav-item" onclick="nav('flashcards')"><span class="nav-ico">🃏</span>Flashcards</div>
+      <div class="nav-item" onclick="nav('quiz')"><span class="nav-ico">📝</span>Quiz / Test</div>
+      <div class="nav-item" onclick="nav('presentations')"><span class="nav-ico">🎬</span>Presentations</div>
+      <div class="nav-section">AI Tools</div>
+      <div class="nav-item" onclick="nav('ai')"><span class="nav-ico">🤖</span>AI Explainer</div>
+      <div class="nav-section">Account</div>
+      <div class="nav-item" onclick="nav('inbox')"><span class="nav-ico">📬</span>Inbox<span class="nav-badge hidden" id="inbox-badge">0</span></div>
+      <div class="nav-item" onclick="nav('progress')"><span class="nav-ico">📊</span>Progress</div>
+    </nav>
+    <div class="sb-foot">
+      <div class="theme-toggle" onclick="toggleTheme()">
+        <span class="theme-lbl" id="theme-lbl">☀️ Light mode</span>
+        <div class="toggle-track" id="theme-track"><div class="toggle-thumb"></div></div>
+      </div>
+      <button class="logout-btn" onclick="logout()">🚪 Log out</button>
+    </div>
+  </aside>
+
+  <!-- PAGES -->
+  <main class="main">
+
+    <!-- ══ DASHBOARD ══ -->
+    <div class="page active" id="page-dashboard">
+      <div class="ph">
+        <div class="page-title">Dashboard</div>
+        <div class="page-sub" id="dash-greeting">Welcome back!</div>
+      </div>
+      <div class="g4 mb20">
+        <div class="card stat-card"><div class="stat-num" id="ds-lessons">0</div><div class="stat-lbl">Lessons</div></div>
+        <div class="card stat-card"><div class="stat-num" id="ds-cards">0</div><div class="stat-lbl">Flashcards</div></div>
+        <div class="card stat-card"><div class="stat-num" id="ds-quizzes">0</div><div class="stat-lbl">Quizzes Taken</div></div>
+        <div class="card stat-card"><div class="stat-num" id="ds-avg">—</div><div class="stat-lbl">Average Score</div></div>
+      </div>
+      <div class="g2">
+        <div class="card">
+          <div class="bold mb16" style="font-family:var(--df);font-size:18px;">Quick Actions</div>
+          <div style="display:grid;gap:10px;">
+            <button class="btn btn-primary btn-w" onclick="nav('lessons')">📖 Open Lessons</button>
+            <button class="btn btn-secondary btn-w" onclick="nav('flashcards')">🃏 Study Flashcards</button>
+            <button class="btn btn-secondary btn-w" onclick="nav('quiz')">📝 Take a Quiz</button>
+            <button class="btn btn-secondary btn-w" onclick="nav('ai')">🤖 AI Explainer</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="bold mb16" style="font-family:var(--df);font-size:18px;">Recent Activity</div>
+          <div id="dash-activity"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ LESSONS ══ -->
+    <div class="page" id="page-lessons">
+      <div id="lessons-list-view">
+        <div class="ph-row">
+          <div><div class="page-title">Lessons</div><div class="page-sub">Your notes and study guides</div></div>
+          <div class="row">
+            <button class="btn btn-secondary btn-sm" onclick="nav('ai')">🤖 AI from file</button>
+            <button class="btn btn-primary" onclick="newLesson()">+ New Lesson</button>
+          </div>
+        </div>
+        <div id="lessons-list"></div>
+      </div>
+      <div id="lesson-editor" class="hidden">
+        <div class="row mb20" style="justify-content:space-between;">
+          <button class="btn btn-secondary btn-sm" onclick="closeLesson()">← Back</button>
+          <div class="row">
+            <button class="btn btn-secondary btn-sm hidden" id="send-lesson-btn" onclick="openSendModal('lesson')">📤 Send</button>
+            <button class="btn btn-green btn-sm" onclick="saveLesson()">💾 Save</button>
+            <button class="btn btn-red btn-sm" onclick="deleteLesson()">🗑 Delete</button>
+          </div>
+        </div>
+        <input id="les-title" placeholder="Lesson title..." style="font-family:var(--df);font-size:28px;font-weight:700;border:none;border-bottom:2px solid var(--border);border-radius:0;padding:8px 0;margin-bottom:16px;background:transparent;">
+        <div class="form-row">
+          <div><label>Topic</label><input id="les-topic" placeholder="e.g. Hematology"></div>
+          <div><label>Type</label><select id="les-type"><option value="lesson">Lesson</option><option value="guide">Study Guide</option><option value="summary">Summary</option></select></div>
+        </div>
+        <textarea id="les-body" style="min-height:380px;font-size:15px;line-height:1.8;" placeholder="Write your lesson content here..."></textarea>
+        <div class="tts-bar mt16">
+          <button class="tts-play" id="les-tts" onclick="speak(document.getElementById('les-body').value,'les-tts')">🔊</button>
+          <span class="tts-label">Read lesson aloud</span>
+          <select class="tts-speed" id="les-spd"><option value=".8">0.8×</option><option value="1" selected>1×</option><option value="1.2">1.2×</option><option value="1.5">1.5×</option></select>
+          <button class="btn btn-secondary btn-xs tts-stop" onclick="stopSpeech()">■ Stop</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ FLASHCARDS ══ -->
+    <div class="page" id="page-flashcards">
+      <div id="fc-list-view">
+        <div class="ph-row">
+          <div><div class="page-title">Flashcards</div><div class="page-sub" id="fc-sub">Your study decks</div></div>
+          <div class="row">
+            <button class="btn btn-blue btn-sm" onclick="openModal('fc-ai-modal')">🤖 AI Generate</button>
+            <button class="btn btn-secondary btn-sm" onclick="openSendModal('flashcards')">📤 Send Deck</button>
+            <button class="btn btn-primary" onclick="openModal('fc-add-modal')">+ New Card</button>
+          </div>
+        </div>
+        <div class="row mb16" id="fc-deck-chips"></div>
+        <div id="fc-due-banner" class="hidden" style="background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;border-radius:14px;padding:18px 22px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;">
+          <div><div class="bold" id="fc-due-text">Cards due</div><div style="font-size:12px;opacity:.75;margin-top:3px;">Spaced repetition schedule</div></div>
+          <button onclick="startStudy('due')" style="background:white;color:var(--accent);border:none;border-radius:9px;padding:9px 18px;font-weight:600;cursor:pointer;font-family:var(--ff);font-size:13px;">Study Now →</button>
+        </div>
+        <div id="fc-grid" style="display:grid;gap:11px;"></div>
+        <div id="fc-all-study" class="mt16" style="text-align:center;"></div>
+      </div>
+
+      <!-- Study mode -->
+      <div id="fc-study-view" class="hidden">
+        <div class="row mb20" style="justify-content:space-between;">
+          <button class="btn btn-secondary btn-sm" onclick="exitStudy()">← Back</button>
+          <div class="muted small" id="fc-prog">Card 1 of 1</div>
+          <button class="btn btn-secondary btn-sm" onclick="shuffleStudy()">🔀 Shuffle</button>
+        </div>
+        <div class="fc-scene" id="fc-scene" onclick="flipCard()">
+          <div class="fc-inner" id="fc-inner">
+            <div class="fc-face fc-front"><div class="fc-side-label">Question — tap to flip</div><div class="fc-content" id="fc-front-txt">—</div></div>
+            <div class="fc-face fc-back"><div class="fc-side-label">Answer</div><div class="fc-content" id="fc-back-txt">—</div></div>
+          </div>
+        </div>
+        <div class="tts-bar mb16">
+          <button class="tts-play" id="fc-tts" onclick="fcSpeak()">🔊</button>
+          <span class="tts-label">Read card aloud</span>
+          <button class="btn btn-secondary btn-xs tts-stop" onclick="stopSpeech()">■ Stop</button>
+        </div>
+        <div id="fc-grade-area" class="hidden">
+          <div class="muted small" style="text-align:center;margin-bottom:10px;">How well did you remember?</div>
+          <div class="grade-grid">
+            <button class="grade-btn grade-again" onclick="gradeCard(1)">Again<span class="grade-sub">Forgot</span></button>
+            <button class="grade-btn grade-hard" onclick="gradeCard(2)">Hard<span class="grade-sub">Struggled</span></button>
+            <button class="grade-btn grade-good" onclick="gradeCard(3)">Good<span class="grade-sub">Got it</span></button>
+            <button class="grade-btn grade-easy" onclick="gradeCard(4)">Easy<span class="grade-sub">Perfect</span></button>
+          </div>
+        </div>
+        <div id="fc-flip-hint" class="muted small" style="text-align:center;padding:10px 0;">Tap the card to reveal the answer, then grade yourself</div>
+        <div id="fc-session-done" class="hidden">
+          <div class="card" style="text-align:center;padding:40px;">
+            <div style="font-size:40px;margin-bottom:12px;">🎉</div>
+            <div style="font-family:var(--df);font-size:26px;font-weight:700;margin-bottom:8px;">Session Complete!</div>
+            <div class="muted small" id="fc-summary"></div>
+            <button class="btn btn-primary mt20" onclick="exitStudy()">Back to Cards</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ QUIZ ══ -->
+    <div class="page" id="page-quiz">
+      <div id="quiz-setup">
+        <div class="ph"><div class="page-title">Quiz / Test</div><div class="page-sub">Test your knowledge</div></div>
+        <div class="g2">
+          <div class="card">
+            <div style="font-family:var(--df);font-size:18px;font-weight:700;margin-bottom:18px;">Manual Quiz</div>
+            <div class="form-group"><label>Topic</label><select id="q-topic"></select></div>
+            <div class="form-row">
+              <div><label>Questions</label><input type="number" id="q-count" value="10" min="2" max="50"></div>
+              <div><label>Type</label><select id="q-type"><option value="mc">Multiple Choice</option><option value="written">Written Answer</option></select></div>
+            </div>
+            <button class="btn btn-primary btn-w" onclick="startQuiz()">Start Quiz →</button>
+            <div id="q-err" class="hidden mt8" style="font-size:13px;color:var(--red);">⚠️ Need at least 4 flashcards to start.</div>
+          </div>
+          <div class="card">
+            <div style="font-family:var(--df);font-size:18px;font-weight:700;margin-bottom:6px;">🤖 AI Quiz Generator</div>
+            <div class="muted small mb16">Paste text or upload a file — AI writes thoughtful questions that test real understanding.</div>
+            <textarea id="ai-q-src" style="min-height:80px;" placeholder="Paste lesson content here..."></textarea>
+            <div class="drop-zone mt8" onclick="document.getElementById('qf-inp').click()">
+              <div style="font-size:22px;">📎</div><p>Attach a file (PDF, Word, PowerPoint, image...)</p>
+              <input type="file" id="qf-inp" class="hidden" accept=".pdf,.docx,.pptx,.txt,image/*" onchange="handleQFile(event)">
+            </div>
+            <div id="qf-chips" class="file-chips"></div>
+            <div class="form-row mt12">
+              <div><label>Questions</label><input type="number" id="ai-q-count" value="6" min="2" max="20"></div>
+              <div><label>Difficulty</label><select id="ai-q-diff"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Challenging</option></select></div>
+            </div>
+            <div class="row" style="gap:8px;">
+              <button class="btn btn-blue" style="flex:1;" onclick="aiGenerateQuiz()">🤖 Generate Quiz</button>
+              <button class="btn btn-secondary btn-sm" onclick="openSendModal('quiz')">📤 Send</button>
+            </div>
+            <div id="ai-q-status" class="hidden mt8 small"></div>
+          </div>
+        </div>
+      </div>
+      <div id="quiz-running" class="hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+          <div><div class="xsmall muted">Question <span id="qr-num">1</span> of <span id="qr-tot">10</span></div><div class="prog-bar mt4" style="width:200px;"><div class="prog-fill" id="qr-bar" style="width:0%"></div></div></div>
+          <div class="small bold">Score: <span id="qr-score">0</span></div>
+        </div>
+        <div class="card" style="max-width:660px;">
+          <div class="tts-bar mb20">
+            <button class="tts-play" id="quiz-tts" onclick="speak(currentQ,'quiz-tts')">🔊</button>
+            <span class="tts-label">Read question aloud</span>
+            <button class="btn btn-secondary btn-xs tts-stop" onclick="stopSpeech()">■</button>
+          </div>
+          <div class="q-text" id="qr-question"></div>
+          <div class="q-options" id="qr-options"></div>
+          <div id="qr-written" class="hidden">
+            <textarea id="qr-wans" placeholder="Type your answer..." style="min-height:80px;margin-bottom:12px;"></textarea>
+            <button class="btn btn-primary" onclick="checkWritten()">Check Answer</button>
+          </div>
+          <div id="qr-feedback" class="hidden q-feedback"></div>
+          <button id="qr-next" class="btn btn-primary hidden mt12" onclick="nextQ()">Next →</button>
+        </div>
+      </div>
+      <div id="quiz-done" class="hidden">
+        <div class="card" style="max-width:460px;margin:0 auto;text-align:center;padding:48px 32px;">
+          <div class="muted small mb8">Quiz Complete!</div>
+          <div class="stat-num" style="font-size:64px;" id="done-score">—</div>
+          <div id="done-grade" style="font-size:16px;margin:12px 0 28px;font-family:var(--df);"></div>
+          <div class="row" style="justify-content:center;gap:10px;">
+            <button class="btn btn-primary" onclick="retakeQuiz()">🔁 Retake</button>
+            <button class="btn btn-secondary" onclick="nav('quiz')">New Quiz</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PRESENTATIONS ══ -->
+    <div class="page" id="page-presentations">
+      <div id="pres-list">
+        <div class="ph-row">
+          <div><div class="page-title">Presentations</div><div class="page-sub">Slides with text + audio narration</div></div>
+          <button class="btn btn-primary" onclick="newPres()">+ New Presentation</button>
+        </div>
+        <div id="pres-items"></div>
+      </div>
+      <div id="pres-editor" class="hidden">
+        <div class="row mb20" style="justify-content:space-between;">
+          <button class="btn btn-secondary btn-sm" onclick="closePres()">← Back</button>
+          <div class="row">
+            <button class="btn btn-secondary btn-sm" onclick="openSendModal('presentation')">📤 Send</button>
+            <button class="btn btn-green btn-sm" onclick="savePres()">💾 Save</button>
+            <button class="btn btn-red btn-sm" onclick="deletePresEdit()">🗑</button>
+          </div>
+        </div>
+        <input id="pres-title" placeholder="Presentation title..." style="font-size:24px;font-family:var(--df);font-weight:700;border:none;border-bottom:2px solid var(--border);border-radius:0;padding:8px 0;margin-bottom:16px;background:transparent;width:100%;">
+        <div id="pres-slides-ed"></div>
+        <button class="btn btn-secondary mt12" onclick="addSlide()">+ Add Slide</button>
+      </div>
+      <div id="pres-player" class="hidden">
+        <div class="row mb20" style="justify-content:space-between;">
+          <button class="btn btn-secondary btn-sm" onclick="stopPresPlay()">← Back</button>
+          <div class="bold serif" id="pres-pl-title"></div>
+          <div class="muted small" id="pres-pl-counter">1 / 1</div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:18px;padding:36px;min-height:300px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;box-shadow:0 4px 24px var(--shadow);">
+          <img id="pres-pl-img" class="hidden" style="max-height:200px;max-width:100%;border-radius:12px;margin-bottom:18px;" src="" alt="">
+          <div style="font-family:var(--df);font-size:24px;line-height:1.55;" id="pres-pl-txt"></div>
+        </div>
+        <div class="tts-bar mt16">
+          <button class="tts-play" id="pres-tts" onclick="speak(document.getElementById('pres-pl-txt').textContent,'pres-tts')">🔊</button>
+          <span class="tts-label">Read slide aloud</span>
+          <button class="btn btn-secondary btn-xs tts-stop" onclick="stopSpeech()">■ Stop</button>
+        </div>
+        <div class="row mt16" style="justify-content:center;gap:12px;">
+          <button class="btn btn-secondary" onclick="presNav(-1)">← Prev</button>
+          <button class="btn btn-primary" onclick="presNav(1)">Next →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ AI EXPLAINER ══ -->
+    <div class="page" id="page-ai">
+      <div class="ph"><div class="page-title">AI <em>Explainer</em></div><div class="page-sub">Upload any file or paste text — AI explains, summarizes, and generates flashcards & quizzes</div></div>
+      <div class="g2">
+        <div class="card">
+          <div class="bold mb16" style="font-family:var(--df);font-size:18px;">Input</div>
+          <div class="form-group"><label>Topic / Context (optional but helpful)</label><input id="ai-ctx" placeholder="e.g. Hematology — erythropoiesis"></div>
+          <div class="drop-zone" id="ai-drop" onclick="document.getElementById('ai-file-inp').click()" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="handleAIDrop(event)">
+            <div style="font-size:30px;">📂</div>
+            <p><strong>Click to upload</strong> or drag & drop</p>
+            <p style="font-size:12px;margin-top:4px;">PDF · Word (.docx) · PowerPoint (.pptx) · Images · Text files</p>
+            <input type="file" id="ai-file-inp" class="hidden" accept=".pdf,.docx,.pptx,.txt,.jpg,.jpeg,.png,.gif,.webp" multiple onchange="handleAIFiles(event)">
+          </div>
+          <div id="ai-file-chips" class="file-chips"></div>
+          <div class="divider"></div>
+          <div class="form-group"><label>Or paste text directly</label><textarea id="ai-text" style="min-height:130px;" placeholder="Paste lecture notes, textbook paragraphs, or any complex text..."></textarea></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;">
+            <button class="btn btn-primary" onclick="runAI('explain')">🤖 Explain Simply</button>
+            <button class="btn btn-secondary" onclick="runAI('summarize')">📋 Summarize</button>
+            <button class="btn btn-secondary" onclick="runAI('keypoints')">🔑 Key Points</button>
+            <button class="btn btn-blue" onclick="runAI('flashcards')">🃏 Make Flashcards</button>
+          </div>
+        </div>
+        <div>
+          <div class="ai-panel mb16">
+            <div class="ai-label">✨ AI Output</div>
+            <div id="ai-out" class="ai-output italic muted">AI output will appear here...</div>
+            <div class="tts-bar mt16">
+              <button class="tts-play" id="ai-tts" onclick="speak(document.getElementById('ai-out').textContent,'ai-tts')">🔊</button>
+              <span class="tts-label">Listen to explanation</span>
+              <select class="tts-speed" id="ai-spd"><option value=".8">0.8×</option><option value="1" selected>1×</option><option value="1.2">1.2×</option><option value="1.5">1.5×</option></select>
+              <button class="btn btn-secondary btn-xs tts-stop" onclick="stopSpeech()">■</button>
+            </div>
+          </div>
+          <div class="row" style="gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-green btn-sm" onclick="saveAIAsLesson()">💾 Save as Lesson</button>
+            <button class="btn btn-secondary btn-sm" onclick="openSendModal('ai')">📤 Send</button>
+            <button class="btn btn-secondary btn-sm" onclick="copyAI()">📋 Copy</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ INBOX ══ -->
+    <div class="page" id="page-inbox">
+      <div class="ph-row">
+        <div><div class="page-title">Inbox</div><div class="page-sub">Content shared with you</div></div>
+        <button class="btn btn-secondary btn-sm" onclick="loadInbox()">🔄 Refresh</button>
+      </div>
+      <div id="inbox-list"></div>
+    </div>
+
+    <!-- ══ PROGRESS ══ -->
+    <div class="page" id="page-progress">
+      <div class="ph"><div class="page-title">Progress</div><div class="page-sub" id="prog-sub">Your study performance</div></div>
+      <div class="g2 mb20">
+        <div class="card stat-card"><div class="stat-num" id="prog-avg">—</div><div class="stat-lbl">Average Score</div></div>
+        <div class="card stat-card"><div class="stat-num" id="prog-total">0</div><div class="stat-lbl">Quizzes Taken</div></div>
+      </div>
+      <div class="g2">
+        <div class="card"><div class="bold mb16" style="font-family:var(--df);font-size:18px;">By Topic</div><div id="prog-topics"></div></div>
+        <div class="card"><div class="bold mb16" style="font-family:var(--df);font-size:18px;">Quiz History</div><div id="prog-history"></div></div>
+      </div>
+      <div id="admin-section" class="hidden mt28">
+        <div class="section-rule"><span>Admin View — All Profiles</span></div>
+        <div id="admin-profiles"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ═══ MODALS ═══ -->
+<!-- Flashcard Add/Edit -->
+<div class="overlay" id="fc-add-modal">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title" id="fc-modal-ttl">Add Flashcard</div><button class="modal-close" onclick="closeModal('fc-add-modal')">✕</button></div>
+    <div class="form-group"><label>Topic / Deck</label><input id="fc-m-deck" placeholder="e.g. Hematology"></div>
+    <div class="form-group"><label>Question (Front)</label><textarea id="fc-m-q" style="min-height:80px;" placeholder="What is...?"></textarea></div>
+    <div class="form-group"><label>Answer (Back)</label><textarea id="fc-m-a" style="min-height:80px;" placeholder="The answer..."></textarea></div>
+    <div class="row" style="justify-content:flex-end;gap:9px;">
+      <button class="btn btn-secondary" onclick="closeModal('fc-add-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveFC()">Save Card</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI Flashcard Generator -->
+<div class="overlay" id="fc-ai-modal">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">🤖 AI Flashcard Generator</div><button class="modal-close" onclick="closeModal('fc-ai-modal')">✕</button></div>
+    <div class="muted small mb16">Upload a file or paste notes — AI creates an entire flashcard deck for you.</div>
+    <div class="form-group"><label>Deck Name</label><input id="fc-ai-deck" placeholder="e.g. Microbiology Chapter 3"></div>
+    <div class="drop-zone mb10" onclick="document.getElementById('fcai-file').click()">
+      <div style="font-size:22px;">📎</div><p>Attach a file (PDF, Word, image...)</p>
+      <input type="file" id="fcai-file" class="hidden" accept=".pdf,.docx,.pptx,.txt,image/*" onchange="handleFCFile(event)">
+    </div>
+    <div id="fcai-chips" class="file-chips mb10"></div>
+    <div class="form-group"><label>Or paste text</label><textarea id="fc-ai-src" style="min-height:80px;" placeholder="Paste content..."></textarea></div>
+    <div class="form-group"><label>Number of Cards</label><input type="number" id="fc-ai-cnt" value="10" min="2" max="30"></div>
+    <div id="fc-ai-status" class="hidden mt8 small"></div>
+    <div class="row" style="justify-content:flex-end;gap:9px;margin-top:14px;">
+      <button class="btn btn-secondary" onclick="closeModal('fc-ai-modal')">Cancel</button>
+      <button class="btn btn-blue" onclick="aiGenFC()">🤖 Generate Cards</button>
+    </div>
+  </div>
+</div>
+
+<!-- Send Content Modal -->
+<div class="overlay" id="send-modal">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">📤 Send to Profile</div><button class="modal-close" onclick="closeModal('send-modal')">✕</button></div>
+    <div class="muted small mb16">Enter the recipient's exact profile name. They'll see it in their Inbox instantly.</div>
+    <div class="form-group"><label>Recipient's Name (exact, case-sensitive)</label><input id="send-to" placeholder="e.g. Sarah"></div>
+    <div class="form-group"><label>Sending</label><div id="send-preview" style="background:var(--bg2);border-radius:9px;padding:12px;font-size:13.5px;"></div></div>
+    <div class="row" style="justify-content:flex-end;gap:9px;">
+      <button class="btn btn-secondary" onclick="closeModal('send-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="executeSend()">Send 📤</button>
+    </div>
+    <div id="send-status" class="hidden mt10 small"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
