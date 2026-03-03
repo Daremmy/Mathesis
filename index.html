@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,9 +13,6 @@
 </head>
 <body data-theme="light">
 
-<!-- ═══════════════════════════════════════
-     AUTH SCREEN
-═══════════════════════════════════════ -->
 <div id="auth-screen" class="auth-screen">
   <div class="auth-card">
     <div class="auth-logo">Mathesis</div>
@@ -23,8 +21,6 @@
       <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Log In</button>
       <button class="auth-tab" id="tab-signup" onclick="switchTab('signup')">Sign Up</button>
     </div>
-
-    <!-- Login -->
     <div id="login-form">
       <div class="form-group"><label>Name</label><input id="l-name" placeholder="Your name..." autocomplete="off"></div>
       <div class="form-group">
@@ -35,8 +31,6 @@
       <button class="btn btn-primary btn-w" onclick="login()">Log In →</button>
       <div id="l-err" class="auth-err hidden"></div>
     </div>
-
-    <!-- Sign Up -->
     <div id="signup-form" class="hidden">
       <div class="form-group"><label>Your Name</label><input id="s-name" placeholder="Choose a name..." maxlength="30" autocomplete="off"></div>
       <div class="form-group"><label>Password</label><div class="pwd-wrap"><input id="s-pwd" type="password" placeholder="Choose a password..."><button class="pwd-eye" onclick="togglePwd('s-pwd')">👁</button></div></div>
@@ -54,8 +48,6 @@
       <button class="btn btn-primary btn-w" onclick="signup()">Create Account →</button>
       <div id="s-err" class="auth-err hidden"></div>
     </div>
-
-    <!-- Forgot Password -->
     <div id="forgot-form" class="hidden">
       <div class="form-group"><label>Your Name</label><input id="f-name" placeholder="Your name..."></div>
       <div id="f-q-section" class="hidden">
@@ -70,14 +62,9 @@
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════
-     MAIN APP SHELL
-═══════════════════════════════════════ -->
 <button class="mob-menu" id="mob-menu" onclick="toggleMobSidebar()">☰</button>
 
 <div id="app" class="app-shell hidden">
-
-  <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
     <div class="sb-brand">
       <div class="sb-logo">Math<span>esis</span></div>
@@ -111,10 +98,9 @@
     </div>
   </aside>
 
-  <!-- PAGES -->
   <main class="main">
 
-    <!-- ══ DASHBOARD ══ -->
+    <!-- DASHBOARD -->
     <div class="page active" id="page-dashboard">
       <div class="ph">
         <div class="page-title">Dashboard</div>
@@ -143,7 +129,7 @@
       </div>
     </div>
 
-    <!-- ══ LESSONS ══ -->
+    <!-- LESSONS -->
     <div class="page" id="page-lessons">
       <div id="lessons-list-view">
         <div class="ph-row">
@@ -170,16 +156,25 @@
           <div><label>Type</label><select id="les-type"><option value="lesson">Lesson</option><option value="guide">Study Guide</option><option value="summary">Summary</option></select></div>
         </div>
         <textarea id="les-body" style="min-height:380px;font-size:15px;line-height:1.8;" placeholder="Write your lesson content here..."></textarea>
-        <div class="tts-bar mt16">
-          <button class="tts-play" id="les-tts" onclick="speak(document.getElementById('les-body').value,'les-tts')">🔊</button>
-          <span class="tts-label">Read lesson aloud</span>
-          <select class="tts-speed" id="les-spd"><option value=".8">0.8×</option><option value="1" selected>1×</option><option value="1.2">1.2×</option><option value="1.5">1.5×</option></select>
-          <button class="btn btn-secondary btn-xs tts-stop" onclick="stopSpeech()">■ Stop</button>
+        <div class="tts-player mt16">
+          <div class="tts-top-row">
+            <select class="tts-speed" id="les-spd" onchange="ttsChangeSpeed()"><option value=".8">0.8×</option><option value="1" selected>1×</option><option value="1.2">1.2×</option><option value="1.5">1.5×</option></select>
+            <div class="tts-controls">
+              <button class="tts-btn" onclick="ttsSkip(-3)" title="Back ~10s">⏮</button>
+              <button class="tts-btn tts-main" id="les-tts" onclick="ttsToggle(document.getElementById('les-body').value,'les-tts')">🔊</button>
+              <button class="tts-btn" onclick="ttsSkip(3)" title="Forward ~10s">⏭</button>
+              <button class="tts-btn tts-stop-btn" onclick="stopSpeech()">■</button>
+            </div>
+          </div>
+          <div class="tts-seek-row">
+            <input type="range" class="tts-seek" id="les-seek" min="0" value="0" oninput="ttsSeek(parseInt(this.value))">
+            <span class="tts-counter" id="les-counter">—</span>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- ══ FLASHCARDS ══ -->
+    <!-- FLASHCARDS -->
     <div class="page" id="page-flashcards">
       <div id="fc-list-view">
         <div class="ph-row">
@@ -198,8 +193,6 @@
         <div id="fc-grid" style="display:grid;gap:11px;"></div>
         <div id="fc-all-study" class="mt16" style="text-align:center;"></div>
       </div>
-
-      <!-- Study mode -->
       <div id="fc-study-view" class="hidden">
         <div class="row mb20" style="justify-content:space-between;">
           <button class="btn btn-secondary btn-sm" onclick="exitStudy()">← Back</button>
@@ -212,10 +205,14 @@
             <div class="fc-face fc-back"><div class="fc-side-label">Answer</div><div class="fc-content" id="fc-back-txt">—</div></div>
           </div>
         </div>
-        <div class="tts-bar mb16">
-          <button class="tts-play" id="fc-tts" onclick="fcSpeak()">🔊</button>
-          <span class="tts-label">Read card aloud</span>
-          <button class="btn btn-secondary btn-xs tts-stop" onclick="stopSpeech()">■ Stop</button>
+        <div class="tts-player mb16">
+          <div class="tts-top-row">
+            <span class="tts-label">Read card aloud</span>
+            <div class="tts-controls">
+              <button class="tts-btn tts-main" id="fc-tts" onclick="fcSpeak()">🔊</button>
+              <button class="tts-btn tts-stop-btn" onclick="stopSpeech()">■</button>
+            </div>
+          </div>
         </div>
         <div id="fc-grade-area" class="hidden">
           <div class="muted small" style="text-align:center;margin-bottom:10px;">How well did you remember?</div>
@@ -238,7 +235,7 @@
       </div>
     </div>
 
-    <!-- ══ QUIZ ══ -->
+    <!-- QUIZ -->
     <div class="page" id="page-quiz">
       <div id="quiz-setup">
         <div class="ph"><div class="page-title">Quiz / Test</div><div class="page-sub">Test your knowledge</div></div>
@@ -280,10 +277,14 @@
           <div class="small bold">Score: <span id="qr-score">0</span></div>
         </div>
         <div class="card" style="max-width:660px;">
-          <div class="tts-bar mb20">
-            <button class="tts-play" id="quiz-tts" onclick="speak(currentQ,'quiz-tts')">🔊</button>
-            <span class="tts-label">Read question aloud</span>
-            <button class="btn btn-secondary btn-xs tts-stop" onclick="stopSpeech()">■</button>
+          <div class="tts-player mb20">
+            <div class="tts-top-row">
+              <span class="tts-label">Read question aloud</span>
+              <div class="tts-controls">
+                <button class="tts-btn tts-main" id="quiz-tts" onclick="ttsToggle(currentQ,'quiz-tts')">🔊</button>
+                <button class="tts-btn tts-stop-btn" onclick="stopSpeech()">■</button>
+              </div>
+            </div>
           </div>
           <div class="q-text" id="qr-question"></div>
           <div class="q-options" id="qr-options"></div>
@@ -308,7 +309,7 @@
       </div>
     </div>
 
-    <!-- ══ PRESENTATIONS ══ -->
+    <!-- PRESENTATIONS -->
     <div class="page" id="page-presentations">
       <div id="pres-list">
         <div class="ph-row">
@@ -340,10 +341,16 @@
           <img id="pres-pl-img" class="hidden" style="max-height:200px;max-width:100%;border-radius:12px;margin-bottom:18px;" src="" alt="">
           <div style="font-family:var(--df);font-size:24px;line-height:1.55;" id="pres-pl-txt"></div>
         </div>
-        <div class="tts-bar mt16">
-          <button class="tts-play" id="pres-tts" onclick="speak(document.getElementById('pres-pl-txt').textContent,'pres-tts')">🔊</button>
-          <span class="tts-label">Read slide aloud</span>
-          <button class="btn btn-secondary btn-xs tts-stop" onclick="stopSpeech()">■ Stop</button>
+        <div class="tts-player mt16">
+          <div class="tts-top-row">
+            <span class="tts-label">Read slide aloud</span>
+            <div class="tts-controls">
+              <button class="tts-btn" onclick="ttsSkip(-3)" title="Back ~10s">⏮</button>
+              <button class="tts-btn tts-main" id="pres-tts" onclick="ttsToggle(document.getElementById('pres-pl-txt').textContent,'pres-tts')">🔊</button>
+              <button class="tts-btn" onclick="ttsSkip(3)" title="Forward ~10s">⏭</button>
+              <button class="tts-btn tts-stop-btn" onclick="stopSpeech()">■</button>
+            </div>
+          </div>
         </div>
         <div class="row mt16" style="justify-content:center;gap:12px;">
           <button class="btn btn-secondary" onclick="presNav(-1)">← Prev</button>
@@ -352,7 +359,7 @@
       </div>
     </div>
 
-    <!-- ══ AI EXPLAINER ══ -->
+    <!-- AI EXPLAINER -->
     <div class="page" id="page-ai">
       <div class="ph"><div class="page-title">AI <em>Explainer</em></div><div class="page-sub">Upload any file or paste text — AI explains, summarizes, and generates flashcards & quizzes</div></div>
       <div class="g2">
@@ -379,11 +386,20 @@
           <div class="ai-panel mb16">
             <div class="ai-label">✨ AI Output</div>
             <div id="ai-out" class="ai-output italic muted">AI output will appear here...</div>
-            <div class="tts-bar mt16">
-              <button class="tts-play" id="ai-tts" onclick="speak(document.getElementById('ai-out').textContent,'ai-tts')">🔊</button>
-              <span class="tts-label">Listen to explanation</span>
-              <select class="tts-speed" id="ai-spd"><option value=".8">0.8×</option><option value="1" selected>1×</option><option value="1.2">1.2×</option><option value="1.5">1.5×</option></select>
-              <button class="btn btn-secondary btn-xs tts-stop" onclick="stopSpeech()">■</button>
+            <div class="tts-player mt16">
+              <div class="tts-top-row">
+                <select class="tts-speed" id="ai-spd" onchange="ttsChangeSpeed()"><option value=".8">0.8×</option><option value="1" selected>1×</option><option value="1.2">1.2×</option><option value="1.5">1.5×</option></select>
+                <div class="tts-controls">
+                  <button class="tts-btn" onclick="ttsSkip(-3)" title="Back ~10s">⏮</button>
+                  <button class="tts-btn tts-main" id="ai-tts" onclick="ttsToggle(document.getElementById('ai-out').textContent,'ai-tts')">🔊</button>
+                  <button class="tts-btn" onclick="ttsSkip(3)" title="Forward ~10s">⏭</button>
+                  <button class="tts-btn tts-stop-btn" onclick="stopSpeech()">■</button>
+                </div>
+              </div>
+              <div class="tts-seek-row">
+                <input type="range" class="tts-seek" id="ai-seek" min="0" value="0" oninput="ttsSeek(parseInt(this.value))">
+                <span class="tts-counter" id="ai-counter">—</span>
+              </div>
             </div>
           </div>
           <div class="row" style="gap:8px;flex-wrap:wrap;">
@@ -395,7 +411,7 @@
       </div>
     </div>
 
-    <!-- ══ INBOX ══ -->
+    <!-- INBOX -->
     <div class="page" id="page-inbox">
       <div class="ph-row">
         <div><div class="page-title">Inbox</div><div class="page-sub">Content shared with you</div></div>
@@ -404,7 +420,7 @@
       <div id="inbox-list"></div>
     </div>
 
-    <!-- ══ PROGRESS ══ -->
+    <!-- PROGRESS -->
     <div class="page" id="page-progress">
       <div class="ph"><div class="page-title">Progress</div><div class="page-sub" id="prog-sub">Your study performance</div></div>
       <div class="g2 mb20">
@@ -424,8 +440,7 @@
   </main>
 </div>
 
-<!-- ═══ MODALS ═══ -->
-<!-- Flashcard Add/Edit -->
+<!-- MODALS -->
 <div class="overlay" id="fc-add-modal">
   <div class="modal">
     <div class="modal-head"><div class="modal-title" id="fc-modal-ttl">Add Flashcard</div><button class="modal-close" onclick="closeModal('fc-add-modal')">✕</button></div>
@@ -439,7 +454,6 @@
   </div>
 </div>
 
-<!-- AI Flashcard Generator -->
 <div class="overlay" id="fc-ai-modal">
   <div class="modal">
     <div class="modal-head"><div class="modal-title">🤖 AI Flashcard Generator</div><button class="modal-close" onclick="closeModal('fc-ai-modal')">✕</button></div>
@@ -460,7 +474,6 @@
   </div>
 </div>
 
-<!-- Send Content Modal -->
 <div class="overlay" id="send-modal">
   <div class="modal">
     <div class="modal-head"><div class="modal-title">📤 Send to Profile</div><button class="modal-close" onclick="closeModal('send-modal')">✕</button></div>
