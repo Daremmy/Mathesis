@@ -251,15 +251,15 @@ function toast(msg, duration = 3000) {
 
 /* ═══════════════════════════════════════════════════════
    SECTION 6 — TEXT-TO-SPEECH
-   ─────────────────────────────────────────────────────
-   Splits text into small chunks so it works on Android.
-   Chrome on phones cuts off long TTS — chunking fixes it.
-   Also waits for voices to load before speaking.
+   Chunked for mobile. Pause, seek, skip supported.
 ═══════════════════════════════════════════════════════ */
 let ttsActive = {};
 let ttsQueue = [];
+let ttsAllChunks = [];
 let ttsCurrentBtn = null;
 let ttsRate = 1.0;
+let ttsChunkIdx = 0;
+let ttsPaused = false;
 
 function splitIntoChunks(text, maxLen = 180) {
   const sentences = text.match(/[^.!?\n]+[.!?\n]*/g) || [text];
@@ -269,66 +269,134 @@ function splitIntoChunks(text, maxLen = 180) {
     if ((current + s).length > maxLen) {
       if (current.trim()) chunks.push(current.trim());
       current = s;
-    } else {
-      current += ' ' + s;
-    }
+    } else { current += ' ' + s; }
   }
   if (current.trim()) chunks.push(current.trim());
   return chunks.length ? chunks : [text];
 }
 
+function ttsToggle(text, btnId) {
+  if (ttsActive[btnId]) {
+    if (ttsPaused) { ttsResume(); return; }
+    ttsPause(); return;
+  }
+  speak(text, btnId);
+}
+
 function speak(text, btnId) {
   if (!text?.trim()) return;
-  if (ttsActive[btnId]) { stopSpeech(); return; }
   stopSpeech();
   const spdEl = document.getElementById(btnId.replace('tts','spd').replace('-tts','-spd'));
   ttsRate = spdEl ? parseFloat(spdEl.value) : 1.0;
-  ttsQueue = splitIntoChunks(text.trim());
+  ttsAllChunks = splitIntoChunks(text.trim());
+  ttsQueue = [...ttsAllChunks];
+  ttsChunkIdx = 0;
   ttsCurrentBtn = btnId;
   ttsActive[btnId] = true;
+  ttsPaused = false;
   setTTSState(btnId, true);
-
-  // Android Chrome needs voices to be loaded first
+  updateSeek();
   const voices = window.speechSynthesis.getVoices();
-  if (voices.length > 0) {
-    speakNextChunk();
-  } else {
+  if (voices.length > 0) { speakNextChunk(); }
+  else {
     window.speechSynthesis.onvoiceschanged = () => {
       window.speechSynthesis.onvoiceschanged = null;
       speakNextChunk();
     };
-    setTimeout(speakNextChunk, 500); // fallback
+    setTimeout(speakNextChunk, 500);
   }
 }
 
 function speakNextChunk() {
   if (!ttsQueue.length || !ttsCurrentBtn) {
     setTTSState(ttsCurrentBtn, false);
-    ttsActive = {}; ttsCurrentBtn = null;
-    return;
+    ttsActive = {}; ttsCurrentBtn = null; ttsPaused = false;
+    updateSeek(); return;
   }
   const chunk = ttsQueue.shift();
+  ttsChunkIdx = ttsAllChunks.length - ttsQueue.length - 1;
   const utt = new SpeechSynthesisUtterance(chunk);
   utt.rate = ttsRate;
   utt.lang = 'en-US';
-  // Pick an English voice — Android Chrome requires an explicit voice
   const voices = window.speechSynthesis.getVoices();
   const voice = voices.find(v => v.lang.startsWith('en') && v.localService) ||
-                voices.find(v => v.lang.startsWith('en')) ||
-                voices[0];
+                voices.find(v => v.lang.startsWith('en')) || voices[0];
   if (voice) utt.voice = voice;
-  utt.onend = () => speakNextChunk();
-  utt.onerror = () => speakNextChunk(); // skip broken chunk, keep going
+  utt.onend = () => { if (!ttsPaused) { updateSeek(); speakNextChunk(); } };
+  utt.onerror = () => speakNextChunk();
   window.speechSynthesis.speak(utt);
+  updateSeek();
+}
+
+function ttsPause() {
+  window.speechSynthesis.pause();
+  ttsPaused = true;
+  const btn = document.getElementById(ttsCurrentBtn);
+  if (btn) btn.textContent = '▶';
+}
+
+function ttsResume() {
+  window.speechSynthesis.resume();
+  ttsPaused = false;
+  const btn = document.getElementById(ttsCurrentBtn);
+  if (btn) btn.textContent = '⏸';
+}
+
+function ttsSkip(steps) {
+  if (!ttsCurrentBtn) return;
+  const newIdx = Math.max(0, Math.min(ttsAllChunks.length - 1, ttsChunkIdx + steps));
+  const btn = ttsCurrentBtn;
+  const text = ttsAllChunks.join(' ');
+  window.speechSynthesis.cancel();
+  ttsQueue = ttsAllChunks.slice(newIdx);
+  ttsChunkIdx = newIdx;
+  ttsPaused = false;
+  speakNextChunk();
+}
+
+function ttsSeek(idx) {
+  if (!ttsAllChunks.length) return;
+  const newIdx = Math.max(0, Math.min(ttsAllChunks.length - 1, idx));
+  window.speechSynthesis.cancel();
+  ttsQueue = ttsAllChunks.slice(newIdx);
+  ttsChunkIdx = newIdx;
+  ttsPaused = false;
+  speakNextChunk();
+}
+
+function ttsChangeSpeed() {
+  if (!ttsCurrentBtn) return;
+  const spdEl = document.getElementById(ttsCurrentBtn.replace('tts','spd').replace('-tts','-spd'));
+  if (spdEl) { ttsRate = parseFloat(spdEl.value); }
+  // Restart from current chunk with new speed
+  const newIdx = ttsChunkIdx;
+  window.speechSynthesis.cancel();
+  ttsQueue = ttsAllChunks.slice(newIdx);
+  ttsChunkIdx = newIdx;
+  ttsPaused = false;
+  speakNextChunk();
+}
+
+function updateSeek() {
+  const total = ttsAllChunks.length;
+  const idx = ttsChunkIdx;
+  // Update all seek bars and counters
+  ['les','ai'].forEach(prefix => {
+    const seek = document.getElementById(prefix+'-seek');
+    const counter = document.getElementById(prefix+'-counter');
+    if (seek) { seek.max = Math.max(1, total-1); seek.value = idx; }
+    if (counter) counter.textContent = total > 0 ? `${idx+1} / ${total}` : '—';
+  });
 }
 
 function stopSpeech() {
   window.speechSynthesis.cancel();
-  ttsQueue = [];
+  ttsQueue = []; ttsAllChunks = []; ttsChunkIdx = 0; ttsPaused = false;
   const btn = ttsCurrentBtn;
   ttsCurrentBtn = null;
   Object.keys(ttsActive).forEach(k => setTTSState(k, false));
   ttsActive = {};
+  updateSeek();
 }
 
 function setTTSState(id, active) {
